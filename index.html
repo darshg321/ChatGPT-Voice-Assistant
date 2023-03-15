@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voice Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+</head>
+<body>
+<form onsubmit="Main(event)">
+    <label for="GPTRequest">GPT Request:</label><br>
+    <input type="text" id="GPTRequest" name="GPTRequest" placeholder="Your GPT Prompt" required><br>
+    <label for="APIKey">API Key:</label><br>
+    <input type="text" id="APIKey" name="APIKey" placeholder="Your OpenAI API Key" required><br><br>
+    <label for="GPTRole">Role of AI:</label><br>
+    <input type="text" id="GPTRole" name="GPTRole" placeholder="Role you want AI to play" value="Be a helpful assistant." required><br><br>
+
+    <button type="submit">Submit</button>
+</form>
+<p id="messageBody"></p>
+<button id="stopTTS" onclick="window.speechSynthesis.cancel()">Stop TTS</button>
+<script src="script.js"></script>
+</body>
+</html>

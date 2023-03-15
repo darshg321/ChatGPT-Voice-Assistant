@@ -1,0 +1,8 @@
+body {
+    background: aqua;
+}
+#messageBody {
+    text-align: center;
+    width: 50%;
+    font-size: 25px;
+}
