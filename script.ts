@@ -1,32 +1,80 @@
-function maybeValidKey(key: string): boolean {
-    key.replace(/\s+/g, '')
-    // test if the string contains symbols after the first 3 char
-    const regex: RegExp = /^.{3}\W+.*$/;
-    return key.startsWith('sk-') && !regex.test(key);
+const apiKey: string = '';
+
+let micButtonClicked: boolean = false;
+function micButton() {
+    if (!micButtonClicked) {
+        micButtonClicked = true;
+        Main();
+    }
 }
 
-function submitForm(event): { role: string; apiKey: string; prompt: string } {
-    event.preventDefault();
-    let gptRequest: string = document.getElementById("GPTRequest")["value"];
-    let apiKey: string = document.getElementById("APIKey")["value"];
-    let gptRole: string = document.getElementById("GPTRole")["value"];
+async function getAudio() {
+    console.log("started");
+    const micButton = document.getElementById("startMic");
+    micButton.classList.toggle('recording');
 
-    if (!maybeValidKey(apiKey)) {
-        alert("Invalid Api Key!");
-        return;
-    }
-    else if (gptRequest.length > 100 || gptRole.length > 100) {
-        alert("Prompt and role must be less than 100 characters!");
-        return;
-    }
-    return {
-        prompt: gptRequest,
-        apiKey: apiKey,
-        role: gptRole
-    };
+    return new Promise(async (resolve, reject): Promise<Blob | boolean> => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            let mediaRecorder = new MediaRecorder(stream);
+            let chunks = [];
+
+            mediaRecorder.addEventListener('dataavailable', (e) => {
+                chunks.push(e.data);
+            });
+
+            mediaRecorder.addEventListener('stop', () => {
+                console.log("stopped audio");
+                micButton.classList.toggle('recording');
+                let audioBlob: Blob = new Blob(chunks);
+                resolve(audioBlob);
+            });
+
+            micButton.addEventListener('click', () => {
+                if (!(mediaRecorder.state === "inactive")) {
+                    mediaRecorder.stop();
+                }
+            });
+            mediaRecorder.start();
+            let timeoutId = setTimeout(() => {
+                if (mediaRecorder.state === "recording") {
+                    mediaRecorder.stop();
+                    console.log("stopped audio");
+                    micButton.classList.toggle('recording');
+                    let audioBlob: Blob = new Blob(chunks);
+                    resolve(audioBlob);
+                }
+            }, 15000); // Set time limit to 15 seconds
+        }
+        catch (error) {
+            console.error('Failed to access user media', error);
+            alert("Accept Mic Permission to use")
+            location.reload();
+            reject(error);
+            return false;
+        }
+    });
 }
 
-function fetchPrompt(fullPrompt: { prompt: string; apiKey: string; role: string; }): Promise<any> {
+function transcribeAudio(audioBlob) {
+    return new Promise((resolve, reject) => {
+        let formData = new FormData();
+        formData.append('audio', audioBlob, 'recording.wav');
+
+        fetch('/api/transcribe', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.text())
+            .then((text) => resolve(text))
+            .catch(error => {
+                console.error('Error occurred while making API call:', error);
+                reject(error);
+            });
+    });
+}
+
+function fetchPrompt(fullPrompt: { role: string; apiKey: string; Prompt: unknown }): Promise<any> {
     return fetch('/api/getrequest', {
         method: 'POST',
         body: JSON.stringify(fullPrompt),
@@ -39,7 +87,6 @@ function fetchPrompt(fullPrompt: { prompt: string; apiKey: string; role: string;
                 throw new Error(`API call failed with status ${response.status}`);
             }
             console.log('API call succeeded');
-            document.querySelector("form").reset();
             return response.json();
         })
         .catch(error => {
@@ -58,18 +105,26 @@ function speakText(text): void {
     window.speechSynthesis.speak(textToSpeech);
 }
 
-function Main(event): void {
-    let fullPrompt = submitForm(event);
-    if (fullPrompt === undefined) {
-        return;
+async function Main(): Promise<void> {
+
+    let blobData = await getAudio();
+    console.log("got audio")
+    let audioText = await transcribeAudio(blobData)
+    console.log("got audio text: " + audioText)
+
+    let fullPrompt = {
+        Prompt: audioText,
+        apiKey: apiKey,
+        role: "Be a helpful assistant."
     }
 
     fetchPrompt(fullPrompt)
         .then(replyData => {
             if (!replyData) {
-                console.log("Error getting prompt");
+                console.log("Error getting Prompt");
                 return;
             }
+            console.log("got reply data")
 
             let messageBody: HTMLElement = document.getElementById("messageBody");
             messageBody.innerText = replyData.choices[0].message.content;
@@ -77,6 +132,7 @@ function Main(event): void {
             speakText(replyData.choices[0].message.content);
         })
         .catch(error => {
-            console.error("Error occurred while fetching prompt:", error);
+            console.error("Error occurred while fetching Prompt:", error);
         });
+    micButtonClicked = false;
 }

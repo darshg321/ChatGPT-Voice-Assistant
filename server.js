@@ -34,9 +34,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var _this = this;
 var express = require('express');
 var fs = require('fs');
 var _a = require('openai'), Configuration = _a.Configuration, OpenAIApi = _a.OpenAIApi;
+var PythonShell = require('python-shell').PythonShell;
+var multer = require('multer');
+var path = require('path');
+var upload = multer({ dest: './' });
 var PORT = 8080;
 var app = express();
 app.use(express.json());
@@ -91,7 +96,8 @@ app.post('/api/getrequest', function (req, res) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, sendPrompt(req.body.apiKey, "gpt-3.5-turbo", req.body.role, req.body.prompt)];
+                    console.log(req.body);
+                    return [4 /*yield*/, sendPrompt(req.body.apiKey, "gpt-3.5-turbo", req.body.role, req.body.Prompt)];
                 case 1:
                     replyData = _a.sent();
                     res.status(200).send(replyData);
@@ -105,6 +111,27 @@ app.post('/api/getrequest', function (req, res) {
         });
     });
 });
+app.post('/api/transcribe', upload.single('audio'), function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var filePath, audioFilename, audioText;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                filePath = path.join(__dirname, req.file.path) + '.wav';
+                audioFilename = req.file.path.split('/').pop() + '.wav';
+                console.log("Saved Audio to: " + audioFilename);
+                fs.renameSync(req.file.path, filePath); // set file extension
+                return [4 /*yield*/, transcribeAudio(audioFilename)];
+            case 1:
+                audioText = _a.sent();
+                fs.unlink(filePath, function () {
+                    console.log("Deleted file");
+                });
+                console.log(audioText);
+                res.status(200).send(audioText);
+                return [2 /*return*/];
+        }
+    });
+}); });
 function sendPrompt(API_KEY, Model, Role, Prompt) {
     return __awaiter(this, void 0, void 0, function () {
         var configuration, openai, completion;
@@ -130,6 +157,38 @@ function sendPrompt(API_KEY, Model, Role, Prompt) {
                 case 1:
                     completion = _a.sent();
                     return [2 /*return*/, completion.data];
+            }
+        });
+    });
+}
+function transcribeAudio(audioFile) {
+    return new Promise(function (resolve, reject) {
+        // specify the path to the Python file
+        var pythonFile = './transcribeFile.py';
+        // set up the options for Python shell
+        var options = {
+            mode: 'text',
+            pythonPath: '/usr/bin/python3',
+            args: [audioFile]
+        };
+        // create a new Python shell instance
+        var pyshell = new PythonShell(pythonFile, options);
+        var output = '';
+        // listen for messages coming from the Python script
+        pyshell.on('message', function (message) {
+            output += message + '\n';
+        });
+        // listen for errors from the Python script
+        pyshell.on('error', function (err) {
+            reject(err);
+        });
+        // end the input stream and wait for the shell to exit
+        pyshell.end(function (err) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                resolve(output);
             }
         });
     });

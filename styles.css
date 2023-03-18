@@ -1,8 +1,71 @@
 body {
-    background: aqua;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
 }
-#messageBody {
+.recording {
+    filter: invert(100%) sepia(100%) saturate(10000%) hue-rotate(0deg) brightness(100%);
+}
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+.message-box {
+    background-color: #fff;
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
     text-align: center;
-    width: 50%;
-    font-size: 25px;
+}
+
+.button-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#startMic {
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    margin-right: 20px;
+}
+
+#stopTTS {
+    background-color: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#stopTTS:hover {
+    background-color: #3e8e41;
+}
+
+@media only screen and (max-width: 768px) {
+    .message-box {
+        padding: 10px;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    #startMic {
+        width: 30px;
+        height: 30px;
+        margin-right: 10px;
+    }
+
+    #stopTTS {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
 }
